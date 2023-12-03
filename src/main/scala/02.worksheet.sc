@@ -21,9 +21,12 @@ def parseGame(s: String) =
             case "blue" => Color.Blue
         (count.toInt, color)
         
-    val List(game, drawsString) = s.split(":").toList
+    val List(gameString, drawsString) = s.split(":").toList
+    
     val draws = drawsString.split(";").toList.map(_.trim())
     val parsedDraws = draws.map(draw => draw.split(",").toList.map(colorDraw => convertToRLE(colorDraw.trim())))
+
+    val game = gameString.split(" ").toList.last.toInt
 
     (game, parsedDraws)
 
@@ -37,10 +40,8 @@ def leq(draw1: List[(Int, Color)], draw2: List[(Int, Color)]): Boolean =
 
     comparisonPerColor.forall(identity)
 
+// Part 1
 games.map(game => 
     val (gameNumber, draws) = parseGame(game)
-
-    println(draws.forall(draw => leq(draw, reference)))
-
-    draws.forall(draw => leq(draw, reference))
-).zipWithIndex.filter(_._1).map(_._2 + 1).reduceLeft(_ + _)
+    (gameNumber, draws.forall(draw => leq(draw, reference)))
+).filter(_._2).map(_._1).reduceLeft(_ + _)
