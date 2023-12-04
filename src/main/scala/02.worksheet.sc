@@ -37,7 +37,6 @@ def leq(draw1: List[(Int, Color)], draw2: List[(Int, Color)]): Boolean =
 
         colorCount._1 <= countIn2
     )
-
     comparisonPerColor.forall(identity)
 
 // Part 1
@@ -45,3 +44,23 @@ games.map(game =>
     val (gameNumber, draws) = parseGame(game)
     (gameNumber, draws.forall(draw => leq(draw, reference)))
 ).filter(_._2).map(_._1).reduceLeft(_ + _)
+
+// Part 2
+games.map(game =>
+    val (gameNumber, draws) = parseGame(game)
+    var minRed = 0
+    var minGreen = 0
+    var minBlue = 0
+
+    draws.foreach(draw => 
+        val red = draw.find(_._2 == Color.Red).map(_._1).getOrElse(0)
+        val green = draw.find(_._2 == Color.Green).map(_._1).getOrElse(0)
+        val blue = draw.find(_._2 == Color.Blue).map(_._1).getOrElse(0)
+        
+        if red > minRed then minRed = red
+        if green > minGreen then minGreen = green
+        if blue > minBlue then minBlue = blue
+    )
+
+    minRed * minGreen * minBlue
+).reduceLeft(_ + _)
