@@ -4,7 +4,7 @@
 
 |  + | 1 | 2 | 3 | 4 | 5 |
 |:--:|:-:|:-:|:-:|:-:|:-:|
-| 00 | [☑](https://github.com/kotleta2007/advent-of-code-2023/tree/main/src/main/scala/01.worksheet.sc) | [☑](https://github.com/kotleta2007/advent-of-code-2023/tree/main/src/main/scala/02.worksheet.sc) |  |  |  |
+| 00 | [☑](https://github.com/kotleta2007/advent-of-code-2023/tree/main/src/main/scala/01.worksheet.sc) | [☑](https://github.com/kotleta2007/advent-of-code-2023/tree/main/src/main/scala/02.worksheet.sc) | [☑](https://github.com/kotleta2007/advent-of-code-2023/tree/main/src/main/scala/03.worksheet.sc) |  |  |
 | 05 |  |  |  |  |  |
 | 10 |  |  |  |  |  |
 | 15 |  |  |  |  |  |
