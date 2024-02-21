@@ -1,7 +1,5 @@
-import scala.collection.immutable.NumericRange.Exclusive
-import scala.collection.immutable.NumericRange.Inclusive
-val almanac = adv.readFromFile("05.input")
-// val almanac = List(
+val input = adv.readFromFile("05.input")
+// val input = List(
 //     "seeds: 79 14 55 13",
 //     "",
 //     "seed-to-soil map:",
@@ -34,55 +32,65 @@ val almanac = adv.readFromFile("05.input")
 //     "",
 //     "humidity-to-location map:",
 //     "60 56 37",
-//     "56 93 4",
+//     "56 93 4"
 // )
 
-// Part 1
-extension[A] (l: List[A])
-    def splitOn(x: A): List[List[A]] = 
-        if l.isEmpty then Nil
-        else if l.head == x then l.tail.splitOn(x)
-        else
-            val (first, next) = l.span(_ != x)
-            first :: next.splitOn(x)
+input.foreach(println)
 
+extension[A] (xs: List[A])
+    def splitOn(elem: A): List[List[A]] = 
+        xs match
+            case Nil => Nil
+            case _ =>
+                val (firstGroup, nextGroups) = xs.span(_ != elem)
+                val rest = 
+                    if nextGroups.nonEmpty 
+                    then nextGroups.tail.splitOn(elem) 
+                    else Nil
+                firstGroup :: rest
+        
 def parseInput(input: List[String]) = 
-    val mapStrings = input.splitOn("")
-
-    def seedsToMap(seeds: String): Map[Exclusive[Long], Exclusive[Long]] =
-        seeds.split(" +").map(n => (n.toLong until n.toLong+1) -> (0.toLong until 0.toLong)).toMap
-    def seedMapToList(seedMap: Map[Exclusive[Long], Exclusive[Long]]) =
-        seedMap.map(_._1.start).toList
-
-    def stringsToMap(numbers: List[String]): Map[Exclusive[Long], Exclusive[Long]] =
-        numbers.map(
-            s => 
-                val List(destination, source, length) = s.split(" +").map(_.toLong).toList
-                (source until (source + length)) -> (destination until (destination + length))
-        ).toMap
-
-    val maps = mapStrings.map(mapLines =>
-        mapLines match
-            case List(s"seeds: $s")                     => seedsToMap(s)
-            case "seed-to-soil map:" :: nums            => stringsToMap(nums)
-            case "soil-to-fertilizer map:" :: nums      => stringsToMap(nums)
-            case "fertilizer-to-water map:" :: nums     => stringsToMap(nums)
-            case "water-to-light map:" :: nums          => stringsToMap(nums)
-            case "light-to-temperature map:" :: nums    => stringsToMap(nums)
-            case "temperature-to-humidity map:" :: nums => stringsToMap(nums)
-            case "humidity-to-location map:" :: nums    => stringsToMap(nums)
-            case _                                      => throw Exception("unknown type of map")
-    )
+    val nested = input.splitOn("")
+    def parseSeeds(s: String) = s.split(" ").map(_.toLong).toList
+    def parseMap(xs: List[String]) = 
+        xs.map:
+            s => s match
+                // case s"$dst $src $len" => (dst.toLong, src.toLong, len.toLong)
+                case s"$dst $src $len" => 
+                    (src.toLong, 
+                    src.toLong + len.toLong - 1,
+                    dst.toLong - src.toLong)
+                // src_start, src_end, offset
     
-    (seedMapToList(maps.head), maps.tail)
+    val parsed: List[Any] = nested.map:
+        m => m match
+            case List(s"seeds: $seedMapString")      => parseSeeds(seedMapString)
+            case "seed-to-soil map:" :: t            => parseMap(t)
+            case "soil-to-fertilizer map:" :: t      => parseMap(t)
+            case "fertilizer-to-water map:" :: t     => parseMap(t)
+            case "water-to-light map:" :: t          => parseMap(t)
+            case "light-to-temperature map:" :: t    => parseMap(t)
+            case "temperature-to-humidity map:" :: t => parseMap(t)
+            case "humidity-to-location map:" :: t    => parseMap(t)
+            case _ => throw new Exception("unknown type of map")
+
+    val seeds = parsed.head.asInstanceOf[List[Long]]
+    val maps  = parsed.tail.asInstanceOf[List[List[(Long, Long, Long)]]]
     
-val (seeds, maps) = parseInput(almanac)
+    (seeds, maps)
 
-def applyMap(m: Map[Exclusive[Long], Exclusive[Long]], x: Long): Long =
-    val rangesFound = m.find(ranges => ranges._1.contains(x))
+val (seeds, maps) = parseInput(input)
 
-    rangesFound match
-        case Some(from, to) => to(from.indexOf(x))
-        case None => x
+// Part 1
 
-seeds.map(seed => maps.foldLeft(seed)((acc, m) => applyMap(m, acc))).min
+def applyMap(m: List[(Long, Long, Long)], res: Long) =
+    m.find(
+        (srcStart, srcEnd, _) => 
+            res >= srcStart && res <= srcEnd
+    ).map(
+        (_, _, offset) => res + offset
+    ).getOrElse(res)
+
+seeds.map:
+    seed => maps.foldLeft(seed)((res, m) => applyMap(m, res))
+.min
