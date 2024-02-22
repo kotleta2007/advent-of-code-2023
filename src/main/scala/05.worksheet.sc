@@ -84,13 +84,70 @@ val (seeds, maps) = parseInput(input)
 // Part 1
 
 def applyMap(m: List[(Long, Long, Long)], res: Long) =
-    m.find(
-        (srcStart, srcEnd, _) => 
-            res >= srcStart && res <= srcEnd
-    ).map(
-        (_, _, offset) => res + offset
-    ).getOrElse(res)
+    m
+    .find((srcStart, srcEnd, _) => res >= srcStart && res <= srcEnd)
+    .map((_, _, offset) => res + offset)
+    .getOrElse(res)
 
 seeds.map:
     seed => maps.foldLeft(seed)((res, m) => applyMap(m, res))
 .min
+
+// Part 2
+
+extension[A] (xs: List[A])
+    def groupByTwo: List[(A, A)] =
+        xs match
+            case Nil => Nil
+            case h1 :: h2 :: t => (h1, h2) :: t.groupByTwo
+            case _ => throw new Exception("odd number of elements")
+
+def applyTransform(r: (Long, Long), offset: Long) =
+    (r._1 + offset, r._2 + offset)
+
+def intersectWithComplement(x: (Long, Long), y: (Long, Long)): (Option[(Long, Long)], Option[List[(Long, Long)]]) =
+    def noOverlap(x: (Long, Long), y: (Long, Long)) = x._2 < y._1 || x._1 > y._2
+    def fullOverlap(x: (Long, Long), y: (Long, Long)) = x._1 >= y._1 && x._2 <= y._2
+    // partialOverlap
+    def xBeforeY(x: (Long, Long), y: (Long, Long)) = y._1 > x._1 && y._2 > x._2
+    def yBeforeX(x: (Long, Long), y: (Long, Long)) = x._1 > y._1 && x._2 > y._2
+    def oneInTheOther(x: (Long, Long), y: (Long, Long)) = y._1 > x._1 && y._2 < x._2
+    // one in the other but match at the borders
+    def touchLeft(x: (Long, Long), y: (Long, Long)) = x._1 == y._1 && x._2 > y._2
+    def touchRight(x: (Long, Long), y: (Long, Long)) = x._1 < y._1 && x._2 == y._2
+
+    (x, y) match
+        case (x, y) if noOverlap(x, y) => (None, Some(List(x)))
+        case (x, y) if fullOverlap(x, y) => (Some(x), None)
+        case (x, y) if xBeforeY(x, y) => (Some((y._1, x._2)), Some(List((x._1, y._1 - 1))))
+        case (x, y) if yBeforeX(x, y) => (Some((x._1, y._2)), Some(List((y._2 + 1, x._2))))
+        case (x, y) if oneInTheOther(x, y) => (Some((y._1, y._2)), Some(List((x._1, y._1 - 1), (y._2 + 1, x._2))))
+        case (x, y) if touchLeft(x, y) => (Some((x._1, y._2)), Some(List((y._2 + 1, x._2))))
+        case (x, y) if touchRight(x, y) => (Some((y._1, x._2)), Some(List((x._1, y._1 - 1))))
+        
+        case _ => throw new Exception("intersect: unreachable") 
+
+// this can be optimized further by merging continuous ranges
+// for example, List((0, 10), (11, 20)) ===> List((0, 20))
+def mapOneRange(input: (Long, Long), mappings: List[(Long, Long, Long)]): List[(Long, Long)] = 
+    mappings match
+        case Nil => List(input)
+        case h :: t =>
+            val (matched, unmatched) = intersectWithComplement(input, (h._1, h._2))
+            (matched, unmatched) match
+                case (Some(fullyMatched), None) => List(applyTransform(fullyMatched, h._3))
+                case (Some(partiallyMatched), Some(toMatch)) =>
+                    applyTransform(partiallyMatched, h._3) :: toMatch.flatMap(r => mapOneRange(r, t))
+                case (None, Some(toMatch)) => toMatch.flatMap(r => mapOneRange(r, t))
+                case _ => throw new Exception("unreachable")
+
+def applyMap2(ranges: List[(Long, Long)],
+             mappings: List[(Long, Long, Long)])
+             : List[(Long, Long)] =
+    ranges.flatMap(r => mapOneRange(r, mappings))
+
+seeds.groupByTwo.map:
+    seedStartAndLen => 
+        val seedRange = (seedStartAndLen._1, seedStartAndLen._1 + seedStartAndLen._2 - 1)
+        maps.foldLeft(List(seedRange))((res, m) => applyMap2(res, m))
+.flatten.sorted.head._1
